@@ -11,10 +11,10 @@ from openpyxl.styles.borders import Border, Side
 
 os.chdir('/Users/spencercorwin/Desktop')
 
-ZWSID = 'X1-ZWz18s1gn1k8i3_4pyss'
+ZWSID = #make sure to input your Zillow API ID here
 address = '26162 La Real'
 zipCode = '92691'
-numOfComps = 25
+numOfComps = 25 #this is the max comps Zillow will give you
 
 #Use this to get a Zillow Property ID
 def getSearchResults(address, zipCode, ZWSID):
