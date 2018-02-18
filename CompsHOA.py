@@ -14,7 +14,7 @@ os.chdir('/Users/spencercorwin/Desktop')
 ZWSID = #make sure to input your Zillow API ID here
 address = '26162 La Real'
 zipCode = '92691'
-numOfComps = 25 #this is the max comps Zillow will give you
+numOfComps = 25     #this is the max comps Zillow will give you
 
 #Use this to get a Zillow Property ID
 def getSearchResults(address, zipCode, ZWSID):
@@ -118,6 +118,17 @@ for c in range(1,sheet.max_column+1):
     for r in range(1,sheet.max_row+1):
         sheet.cell(row=r,column=c).fill = whiteFill
 
+#Resize columns
+for c in range(1,sheet.max_column):
+    max_length = len(str(sheet.cell(row=1,column=c).value))
+    for r in range(1,sheet.max_row):
+        try:
+            if len(str(sheet.cell(row=r,column=c).value)) > max_length:
+                max_length = len(str(sheet.cell(row=r,column=c).value))
+        except:
+            continue
+    sheet.column_dimensions[get_column_letter(c)].width = max_length
+    
 #Save and close the file with a formatted name
 wb.save(address+' Comps '+todaysDateString+'.xlsx')
 print('I\'ve done your bidding, human.')
