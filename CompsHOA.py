@@ -4,21 +4,69 @@ create an Excel file on the desktop with a specially formated table containing
 comparable property sales in the area, complete with address, distance from
 subject, price sold, date sold, price per SF, etc."""
 
-import openpyxl, sys, os, json, requests, datetime, bs4
+#Import dependencies
+import openpyxl
+import os
+import json
+import requests
+import datetime
+import bs4
+import http.client
 from openpyxl.styles import Font, PatternFill, Color
 from openpyxl.utils import get_column_letter
 from openpyxl.styles.borders import Border, Side
 
+#Change directory to desktop
 os.chdir('/Users/spencercorwin/Desktop')
 
-ZWSID = #make sure to input your Zillow API ID here
-address = '26162 La Real'
-zipCode = '92691'
-numOfComps = 25     #this is the max comps Zillow will give you
+#Variable inputs
+API_key = 'ONBOARD API KEY HERE'
+ZWSID = 'ZILLOW API KEY HERE'
+address1 = '2184+Canyon+Dr'
+address2 = 'Costa+Mesa+CA'
+zipCode = '92627'
+radius = '0.06'
+page = '1'
+pagesize ='2'
+
+#Use this to get all the properties in the area. Get their addresses and property IDs
+def get_Onboard_properties_from_address(API_key, address1, address2, radius, page, pagesize):
+    conn = http.client.HTTPSConnection("search.onboard-apis.com")
+    headers = {'accept': "application/json",'apikey': API_key}
+    conn.request("GET", "/propertyapi/v1.0.0/property/address?address1={}&address2={}&radius={}&page={}&pagesize={}".format(address1,address2,radius,page,pagesize), headers=headers) 
+    res = conn.getresponse() 
+    data = res.read()
+    json_data = json.loads(data)
+    properties = json_data['property']
+    for i in range(len(properties)):
+        allData[i] = {}
+        allData[i]['Address'] = properties[i]['address']['line1'] #gives address line 1
+        allData[i]['City, State'] = properties[i]['address']['line2'] #gives address line 2
+        allData[i]['OnboardID'] = properties[i]['identifier']['obPropId'] #gives the Onboard property ID
+
+#Use this to get sales history and property data for each address
+def get_prop_data_sales_history_from_address(API_key, address1, address2):
+    conn = http.client.HTTPSConnection("search.onboard-apis.com")
+    headers = {'accept': "application/json",'apikey': API_key}
+    conn.request("GET", "/propertyapi/v1.0.0/saleshistory/detail?address1={}&address2={}".format(address1, address2), headers=headers) 
+    res = conn.getresponse() 
+    data = res.read()
+    json_data = json.loads(data)
+    if json_data['status']['msg'] == 'SuccessWithResult':
+            properties = json_data['property']
+            propertyData['SF'] = properties[0]['building']['size']['bldgsize']    #gives building size
+            propertyData['Beds'] = properties[0]['building']['rooms']['beds']   #gives the number of beds
+            propertyData['Baths'] = properties[0]['building']['rooms']['bathstotal']    #gives the number of baths
+            propertyData['Sale Price'] = properties[0]['salehistory'][0]['amount']['saleamt']   #gives the most recent sales amount
+            propertyData['Sale Date'] = properties[0]['salehistory'][0]['amount']['salerecdate']    #gives the most recent sale date
+            propertyData['Prev Sale Price'] = properties[0]['salehistory'][1]['amount']['saleamt']  #gives the next most recent sales amount
+            propertyData['Prev Sale Date'] = properties[0]['salehistory'][1]['amount']['salerecdate']   #gives the next most recent sales amount
+    else:
+        pass
 
 #Use this to get a Zillow Property ID
-def getSearchResults(address, zipCode, ZWSID):
-    url = 'http://www.zillow.com/webservice/GetSearchResults.htm?zws-id={}&address={}&citystatezip={}'.format(ZWSID,address,zipCode)
+def getSearchResults(address1, zipCode, ZWSID):
+    url = 'http://www.zillow.com/webservice/GetSearchResults.htm?zws-id={}&address={}&citystatezip={}'.format(ZWSID,address1,zipCode)
     response = requests.get(url)
     response.raise_for_status()
     data = bs4.BeautifulSoup(response.text, 'lxml')
@@ -34,35 +82,31 @@ def getZestimate(ZWSID, ZPID):
     elems = data.select('zestimate amount')
     return (elems[0].getText())
 
-#Function to get the comps and comp details from an inputed Zillow Property ID
-def getDeepComps(ZWSID, ZPID, numOfComps):
-    url = 'http://www.zillow.com/webservice/GetDeepComps.htm?zws-id={}&zpid={}&count={}'.format(ZWSID,ZPID,numOfComps)
-    response = requests.get(url)
-    response.raise_for_status()
-    data = bs4.BeautifulSoup(response.text, 'lxml')
-    allData = {}        #initializing the dictionary
-    for i in range(numOfComps):
-        allData[i] = {}
-    for i in range(numOfComps):
-        address = data.select('street')[i].getText()
-        allData[i]['Address'] = address
-        beds = data.select('bedrooms')[i].getText()
-        allData[i]['Beds'] = beds
-        baths = data.select('bathrooms')[i].getText()
-        allData[i]['Baths'] = baths
-        SF = data.select('finishedsqft')[i].getText()
-        allData[i]['SF'] = SF
-        lastSoldPrice = data.select('lastsoldprice')[i].getText()
-        allData[i]['Sale Price'] = lastSoldPrice
-        lastSoldDate = data.select('lastsolddate')[i].getText()
-        allData[i]['Sale Date'] = lastSoldDate
-        zestimate = data.select('zestimate amount')[i].getText()
-        allData[i]['Zestimate'] = zestimate
-    return (allData)
 
-#Get Zillow Property ID and comp data for the given address to search
-ZPID = getSearchResults(address, zipCode, ZWSID)
-allData = getDeepComps(ZWSID,ZPID,numOfComps)
+
+#TODO: format excel sections to repond to the length of allData
+#TODO: change variable address to address1, numOfComps
+#TODO: make sure lengths of both Onboard functions are correct (may need to add 1 to each loop)
+#TODO: remove Onboard property ID from first function?
+
+#Create dictionary to store all data from above functions that will be used to fill the Excel doc
+allData = {}
+
+#Use first function to get the initial dictionary with a number of propertyes
+get_Onboard_properties_from_address(API_key, address1, address2, radius, page, pagesize)
+
+#Use second function to get more info for each property into the dictionary allData
+for i in range(len(allData)):
+    propertyData = {}
+    get_prop_data_sales_history_from_address(API_key, '+'.join(allData[i]['Address'].split(' ')), '+'.join(allData[i]['City, State'].split(' ')))
+    allData[i]['SF'] = propertyData['SF']
+    allData[i]['Beds'] = propertyData['Beds']
+    allData[i]['Baths'] = propertyData['Baths']
+    allData[i]['Sale Price'] = propertyData['Sale Price']
+    allData[i]['Sale Date'] = propertyData['Sale Date']
+    allData[i]['Prev Sale Price'] = propertyData['Prev Sale Price']
+    allData[i]['Prev Sale Date'] = propertyData['Prev Sale Date']
+
 
 #Create Excel workbook on Desktop
 todaysDate = datetime.datetime.now()
@@ -113,7 +157,7 @@ for c in range(1,sheet.max_column+1):
         sheet.cell(row=r,column=c).border = borderObj
 
 #Fill cells with white color
-whiteFill = PatternFill('solid',fgColor='00FFFFFF')
+whiteFill = PatternFill('solid', fgColor='00FFFFFF')
 for c in range(1,sheet.max_column+1):
     for r in range(1,sheet.max_row+1):
         sheet.cell(row=r,column=c).fill = whiteFill
