@@ -20,14 +20,14 @@ from openpyxl.styles.borders import Border, Side
 os.chdir('/Users/spencercorwin/Desktop')
 
 #Variable inputs
-API_key = 'ONBOARD API KEY HERE'
-ZWSID = 'ZILLOW API KEY HERE'
+API_key = 'ONBOARD API HERE'
+ZWSID = 'ZILLOW API HERE'
 address1 = '2184+Canyon+Dr'
 address2 = 'Costa+Mesa+CA'
 zipCode = '92627'
 radius = '0.06'
 page = '1'
-pagesize ='2'
+pagesize ='100'
 
 #Use this to get all the properties in the area. Get their addresses and property IDs
 def get_Onboard_properties_from_address(API_key, address1, address2, radius, page, pagesize):
@@ -52,16 +52,20 @@ def get_prop_data_sales_history_from_address(API_key, address1, address2):
     res = conn.getresponse() 
     data = res.read()
     json_data = json.loads(data)
-    if json_data['status']['msg'] == 'SuccessWithResult':
-            properties = json_data['property']
-            propertyData['SF'] = properties[0]['building']['size']['bldgsize']    #gives building size
-            propertyData['Beds'] = properties[0]['building']['rooms']['beds']   #gives the number of beds
-            propertyData['Baths'] = properties[0]['building']['rooms']['bathstotal']    #gives the number of baths
+    try:
+        properties = json_data['property']
+        propertyData['SF'] = properties[0]['building']['size']['bldgsize']    #gives building size
+        propertyData['Beds'] = properties[0]['building']['rooms']['beds']   #gives the number of beds
+        propertyData['Baths'] = properties[0]['building']['rooms']['bathstotal']    #gives the number of baths
+        if len(properties[0]['salehistory']) == 1:
+            propertyData['Sale Price'] = properties[0]['salehistory'][0]['amount']['saleamt']   #gives the most recent sales amount
+            propertyData['Sale Date'] = properties[0]['salehistory'][0]['amount']['salerecdate']    #gives the most recent sale date
+        elif len(properties[0]['salehistory']) > 1:
             propertyData['Sale Price'] = properties[0]['salehistory'][0]['amount']['saleamt']   #gives the most recent sales amount
             propertyData['Sale Date'] = properties[0]['salehistory'][0]['amount']['salerecdate']    #gives the most recent sale date
             propertyData['Prev Sale Price'] = properties[0]['salehistory'][1]['amount']['saleamt']  #gives the next most recent sales amount
             propertyData['Prev Sale Date'] = properties[0]['salehistory'][1]['amount']['salerecdate']   #gives the next most recent sales amount
-    else:
+    except:
         pass
 
 #Use this to get a Zillow Property ID
@@ -85,28 +89,29 @@ def getZestimate(ZWSID, ZPID):
 
 
 #TODO: format excel sections to repond to the length of allData
-#TODO: change variable address to address1, numOfComps
+#TODO: change variable address to address1
 #TODO: make sure lengths of both Onboard functions are correct (may need to add 1 to each loop)
-#TODO: remove Onboard property ID from first function?
 
 #Create dictionary to store all data from above functions that will be used to fill the Excel doc
 allData = {}
 
-#Use first function to get the initial dictionary with a number of propertyes
+#Use first function to get the initial dictionary with all of the properties to be gathered
 get_Onboard_properties_from_address(API_key, address1, address2, radius, page, pagesize)
 
 #Use second function to get more info for each property into the dictionary allData
 for i in range(len(allData)):
     propertyData = {}
     get_prop_data_sales_history_from_address(API_key, '+'.join(allData[i]['Address'].split(' ')), '+'.join(allData[i]['City, State'].split(' ')))
-    allData[i]['SF'] = propertyData['SF']
-    allData[i]['Beds'] = propertyData['Beds']
-    allData[i]['Baths'] = propertyData['Baths']
-    allData[i]['Sale Price'] = propertyData['Sale Price']
-    allData[i]['Sale Date'] = propertyData['Sale Date']
-    allData[i]['Prev Sale Price'] = propertyData['Prev Sale Price']
-    allData[i]['Prev Sale Date'] = propertyData['Prev Sale Date']
-
+    try:
+        allData[i]['SF'] = propertyData['SF']
+        allData[i]['Beds'] = propertyData['Beds']
+        allData[i]['Baths'] = propertyData['Baths']
+        allData[i]['Sale Price'] = propertyData['Sale Price']
+        allData[i]['Sale Date'] = propertyData['Sale Date']
+        allData[i]['Prev Sale Price'] = propertyData['Prev Sale Price']
+        allData[i]['Prev Sale Date'] = propertyData['Prev Sale Date']
+    except:
+        continue
 
 #Create Excel workbook on Desktop
 todaysDate = datetime.datetime.now()
@@ -117,7 +122,7 @@ sheet = wb.active
 headingsList = ['Address','Mi from Subject','Beds', 'Baths','SF','Sale Price','Price/SF','Sale Date','Zestimate','Zestimate/SF','Prev Sale Price','Prev Sale Date','Appreciation']
 
 #Fill in the row with data from allData returned from getDeepComps
-for i in range(numOfComps):
+for i in range(len(allData)):
     try:
         sheet.cell(row=i+2,column=1).value = allData[i]['Address']
         sheet.cell(row=i+2,column=3).value = int(allData[i]['Beds'])
@@ -135,7 +140,7 @@ for c in range(1,len(headingsList)+1):
     sheet.cell(row=1,column=c).font = headingFontObj
 
 #Create formulas within the table
-for r in range(2,numOfComps+2):
+for r in range(2,len(allData)+2):
     sheet.cell(row=r,column=7).value = '=F'+str(r)+'/E'+str(r)
     sheet.cell(row=r,column=10).value = '=I'+str(r)+'/E'+str(r)
     sheet.cell(row=r,column=13).value = '=(F'+str(r)+'-K'+str(r)+')/K'+str(r)
@@ -143,11 +148,11 @@ for r in range(2,numOfComps+2):
 #Create averages and totals at the bottom of the table
 bottomFontObj = Font(bold=True, size=11, name='Calibri')
 averagedColumns = [5,6,7,9,10]
-avgRow = numOfComps+2
+avgRow = len(allData)+2
 sheet.cell(row=avgRow,column=4).value = 'Averages:'
 sheet.cell(row=avgRow,column=4).font = bottomFontObj
 for c in averagedColumns:
-    sheet.cell(row=avgRow,column=c).value = '=average({0}2:{0}{1})'.format(get_column_letter(c), numOfComps+1)
+    sheet.cell(row=avgRow,column=c).value = '=average({0}2:{0}{1})'.format(get_column_letter(c), len(allData)+1)
     sheet.cell(row=avgRow,column=c).font = bottomFontObj
 
 #Create borders around all cells except the last row
@@ -174,5 +179,5 @@ for c in range(1,sheet.max_column):
     sheet.column_dimensions[get_column_letter(c)].width = max_length
     
 #Save and close the file with a formatted name
-wb.save(address+' Comps '+todaysDateString+'.xlsx')
+wb.save(' '.join(address1.split('+'))+' Comps '+todaysDateString+'.xlsx')
 print('I\'ve done your bidding, human.')
