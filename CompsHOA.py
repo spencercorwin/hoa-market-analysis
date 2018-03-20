@@ -102,7 +102,8 @@ get_Onboard_properties_from_address(API_key, address1, address2, radius, page, p
 #Use second function to get more info for each property into the dictionary allData
 for i in range(len(allData)):
     propertyData = {}
-    get_prop_data_sales_history_from_address(API_key, '+'.join(allData[i]['Address'].split(' ')), '+'.join(allData[i]['City, State'].split(' ')))
+    ZPID = getSearchResults(address1,zipCode,ZWSID) #THIS LINE NEEDS WORK
+    getUpdatedPropertyDetails(ZWSID,ZPID)
     try:
         allData[i]['SF'] = propertyData['SF']
         allData[i]['Beds'] = propertyData['Beds']
