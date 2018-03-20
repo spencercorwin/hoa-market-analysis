@@ -3,7 +3,13 @@
 command line input of the city where the subject property is. This program
 is used get basic market data for a subject city."""
 
-import os, sys, json, requests, bs4, datetime, docx
+import os
+import sys
+import json
+import requests
+import bs4
+import datetime
+import docx
 
 os.chdir('/Users/spencercorwin/Desktop')
 
@@ -18,28 +24,18 @@ city = str(sys.argv[1:])        #get the subject city
 #Get data from Trulia
 
 
-#Create new Word document
+#Create new Word document and get string of today's date
 todaysDate = datetime.datetime.now()
 todaysDateString = todaysDate.strftime('%m/%d/%y')  #get today's date in a nice format
 doc = docx.Document()
 
 #Add text to the document
 doc.add_heading('Market Analysis:', 1)
-doc.add_paragraph(
-    '{} has a population of {} with a median age of {} and poverty rate of {}%.', style='ListBullet'
-    )
-doc.add_paragraph(
-    'Median household income of {} and median property value of {}.', style='ListBullet'
-    )
-doc.add_paragraph(
-    'Residents of {} work predominantly in {}, {}, {}, and {} positions.', style='ListBullet'
-    )
-doc.add_paragraph(
-    'The highest paid jobs in {} by median earnings are in {}, {}, and {}.', style='ListBullet'
-    )
-doc.add_paragraph(
-    '{}\' unemployment rate is {} according to the BLS.', style='ListBullet'
-    )
+doc.add_paragraph('{} has a population of {} with a median age of {} and poverty rate of {}%.', style='ListBullet')
+doc.add_paragraph('Median household income of {} and median property value of {}.', style='ListBullet')
+doc.add_paragraph('Residents of {} work predominantly in {}, {}, {}, and {} positions.', style='ListBullet')
+doc.add_paragraph('The highest paid jobs in {} by median earnings are in {}, {}, and {}.', style='ListBullet')
+doc.add_paragraph('{}\' unemployment rate is {} according to the BLS.', style='ListBullet')
 
 #Add sources
 doc.add_paragraph('Sourced '+todaysDateString+':')
