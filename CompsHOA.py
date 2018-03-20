@@ -89,8 +89,9 @@ def getZestimate(ZWSID, ZPID):
 
 
 #TODO: format excel sections to repond to the length of allData
-#TODO: change variable address to address1
+#TODO: change variable address to address1, numOfComps
 #TODO: make sure lengths of both Onboard functions are correct (may need to add 1 to each loop)
+#TODO: remove Onboard property ID from first function?
 
 #Create dictionary to store all data from above functions that will be used to fill the Excel doc
 allData = {}
